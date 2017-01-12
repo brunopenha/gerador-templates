@@ -18,13 +18,9 @@ import com.sun.codemodel.JBlock;
 import com.sun.codemodel.JClassAlreadyExistsException;
 import com.sun.codemodel.JCodeModel;
 import com.sun.codemodel.JDefinedClass;
-import com.sun.codemodel.JFormatter;
 import com.sun.codemodel.JMethod;
 import com.sun.codemodel.JMod;
-import com.sun.codemodel.JStatement;
 
-import br.com.six2six.fixturefactory.Fixture;
-import br.com.six2six.fixturefactory.Rule;
 import br.nom.penha.bruno.gerador_template.entidade.Client;
 
 /**
@@ -67,20 +63,16 @@ public class App {
 		// Nome dos Metodos
 		JMethod m = dc.method(JMod.PUBLIC, void.class, "load");
 		// Monta o tratamento do metodo
-		// m.body()._return(JExpr.lit(5));
 		JBlock jBlock = m.body();
 		jBlock.directStatement("Fixture.of(Client.class).addTemplate(\"valid\", new Rule(){{");
 		// For para cada atributo da entidade
-		// jBlock.directStatement(" add(\"id\", random(Long.class, range(1L,
-		// 200L)));");
 		PropertyDescriptor[] pds = obtemAtributos(Client.class);
 		for (PropertyDescriptor propertyDescriptor : pds) {
 
-			jBlock.directStatement(" add(\""+ propertyDescriptor.getDisplayName() + "\", "+ propertyDescriptor.getPropertyType().getSimpleName() + ", range(1L, 200L)));");
+			jBlock.directStatement(" add(\""+ propertyDescriptor.getDisplayName() + "\", "+ propertyDescriptor.getPropertyType().getSimpleName() + ".class, range(1L, 200L)));");
 			
-			//System.out.println(propertyDescriptor.getPropertyType() + " " + );
+			
 		}
-		//
 		jBlock.directStatement("}});");
 
 		File file = new File("./target/gerado");
