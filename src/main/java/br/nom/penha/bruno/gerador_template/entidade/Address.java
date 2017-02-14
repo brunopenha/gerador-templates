@@ -1,4 +1,4 @@
-package br.nom.penha.bruno.gerador_template;
+package br.nom.penha.bruno.gerador_template.entidade;
 
 import java.io.Serializable;
 

@@ -16,6 +16,7 @@ import org.junit.Test;
 import br.com.six2six.fixturefactory.Fixture;
 import br.com.six2six.fixturefactory.Rule;
 import br.com.six2six.fixturefactory.loader.FixtureFactoryLoader;
+import br.nom.penha.bruno.gerador_template.entidade.Address;
 import br.nom.penha.bruno.gerador_template.entidade.Client;
 
 public class FixtureUserTest {

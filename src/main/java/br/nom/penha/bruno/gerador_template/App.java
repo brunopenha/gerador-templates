@@ -6,12 +6,7 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.codemodel.JBlock;
@@ -28,9 +23,7 @@ import br.nom.penha.bruno.gerador_template.entidade.Client;
  *
  */
 public class App {
-	/**
-	 * @param args
-	 */
+	
 	/**
 	 * @param args
 	 */
@@ -39,7 +32,14 @@ public class App {
 		App app = new App();
 
 		try {
-			app.geraClasse("br.gov.dataprev.projeto.template", "EntidadeTemplate", Client.class);
+			
+			String pacote = "br.nom.penha.bruno";
+			String nomeTemplate = "EntidadeTemplate"; 
+			Class<?> entidadeMapeada = Client.class;
+			String label = "valido";
+			
+			
+			app.geraClasse(pacote, nomeTemplate, entidadeMapeada, label);
 		} catch (JClassAlreadyExistsException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -50,12 +50,12 @@ public class App {
 
 	}
 
-	public void geraClasse(String pacote, String classe, Class<?> entidade)
+	public void geraClasse(String pacoteParam, String classeParam, Class<?> entidadeParam, String labelParam)
 			throws JClassAlreadyExistsException, IOException {
 
 		JCodeModel cm = new JCodeModel();
 		// Nome da Classe
-		JDefinedClass dc = cm._class(pacote + "." + classe);
+		JDefinedClass dc = cm._class(pacoteParam + ".template." + classeParam);
 
 		// Nome e tipo dos atributos
 		// JFieldVar atributo = dc.field(mods, type, name)
@@ -64,23 +64,182 @@ public class App {
 		JMethod m = dc.method(JMod.PUBLIC, void.class, "load");
 		// Monta o tratamento do metodo
 		JBlock jBlock = m.body();
-		jBlock.directStatement("Fixture.of(Client.class).addTemplate(\"valid\", new Rule(){{");
-		// For para cada atributo da entidade
-		PropertyDescriptor[] pds = obtemAtributos(Client.class);
-		for (PropertyDescriptor propertyDescriptor : pds) {
+		
+		//Obter os atributos da classe
+		List<Class<?>> classesFilhas = obtemClassesFilhas(entidadeParam, pacoteParam);
 
-			jBlock.directStatement(" add(\""+ propertyDescriptor.getDisplayName() + "\", "+ propertyDescriptor.getPropertyType().getSimpleName() + ".class, range(1L, 200L)));");
-			
-			
+		montaTemplatePorClasse(pacoteParam, entidadeParam, labelParam, jBlock);
+		// Criar os atributos das classes filhas		
+		for (Class<?> classeFilha : classesFilhas) {
+			montaTemplatePorClasse(pacoteParam, classeFilha, labelParam, jBlock);
 		}
-		jBlock.directStatement("}});");
-
-		File file = new File("./target/gerado");
-		file.mkdirs();
-		cm.build(file);
+				
+		//geraArquivoExterno(cm);
 	}
 
-	public PropertyDescriptor[] obtemAtributos(Class<?> entidade) {
+	/**
+	 * @param pacoteParam
+	 * @param entidadeParam
+	 * @param labelParam
+	 * @param jBlock
+	 */
+	private void montaTemplatePorClasse(String pacoteParam, Class<?> entidadeParam, String labelParam, JBlock jBlock) {
+		//jBlock.directStatement("Fixture.of(RubricaValidade.class).addTemplate(\"valido\", new Rule(){{");
+		jBlock.directStatement("Fixture.of(" + entidadeParam.getSimpleName() + ".class).addTemplate(\"" + labelParam + "\", new Rule(){{");
+		// For para cada atributo da entidade
+		//PropertyDescriptor[] pds = obtemAtributos(entidadeParam, pacoteParam);
+		
+		List<String> linhasAdicionadas = preencheLinhas(entidadeParam, pacoteParam, labelParam);
+		
+		for (String linha : linhasAdicionadas) {
+			jBlock.directStatement(linha);
+		}
+		
+//		for (PropertyDescriptor propertyDescriptor : pds) {
+//			
+//			final String linha = " add(\""+ propertyDescriptor.getDisplayName() + "\", "+ propertyDescriptor.getPropertyType().getSimpleName() + ".class, \"valor\");";
+//			System.out.println(linha);
+//			jBlock.directStatement(linha);
+//			
+//			
+//		}
+		jBlock.directStatement("}});");
+	}
+
+
+	public List<String> preencheLinhas(Class<?> entidadeParam, String pacoteParam, String labelParam) {
+		
+		List<String> retorno = new ArrayList<String>(); 
+		String linha = null;
+		
+		BeanInfo info = null;
+		try {
+			info = Introspector.getBeanInfo(entidadeParam);
+			System.out.println("\n\n\t******" + info.getBeanDescriptor());
+		} catch (IntrospectionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		PropertyDescriptor[] pds = info.getPropertyDescriptors();
+		
+		
+		for (PropertyDescriptor propertyDescriptor : pds) {
+			
+			System.out.println("\nObtendo atributos da classe " + entidadeParam.getSimpleName());
+			System.out.println("propertyDescriptor.getDisplayName -> " +  propertyDescriptor.getDisplayName());
+			System.out.println("propertyDescriptor.getName -> " +  propertyDescriptor.getName());
+			System.out.println("propertyDescriptor.getShortDescription -> " +  propertyDescriptor.getShortDescription());
+			System.out.println("propertyDescriptor.getClass -> " +  propertyDescriptor.getClass());
+			System.out.println("propertyDescriptor.getPropertyEditorClass -> " +  propertyDescriptor.getPropertyEditorClass());
+			System.out.println("propertyDescriptor.getPropertyType -> " +  propertyDescriptor.getPropertyType());
+			System.out.println("propertyDescriptor.getReadMethod -> " +  propertyDescriptor.getReadMethod());
+			System.out.println("propertyDescriptor.getWriteMethod -> " +  propertyDescriptor.getWriteMethod());
+			
+			String tipo = propertyDescriptor.getPropertyType().toString(); 
+			//if(tipo.contains("br.nom.penha.bruno")){
+			if(tipo.contains(pacoteParam)){
+				PropertyDescriptor[] pd = obtemAtributos(propertyDescriptor.getPropertyType(),pacoteParam);
+				//add("trabEstrangeiro", one(TTrabEstrang.class, "TTrabEstrangValido"));
+				linha = " add(\""+ propertyDescriptor.getDisplayName() + "\", one("+ propertyDescriptor.getPropertyType().getSimpleName() + ".class, \"" + propertyDescriptor.getPropertyType().getSimpleName() + labelParam.toUpperCase() +"\"));";
+			}else{
+				//add("sexo", "M");
+				//add("racaCor", (byte)3 );
+				if(propertyDescriptor.getPropertyType().getSimpleName().contains("String")){
+					linha = " add(\""+ propertyDescriptor.getDisplayName() + "\", \"valor\");";
+				}else{
+					linha = " add(\""+ propertyDescriptor.getDisplayName() + "\", ("+ propertyDescriptor.getPropertyType() + ") \"valor\");";	
+				}
+				
+			}
+			
+			retorno.add(linha);
+			
+		}
+
+		return retorno;
+		// System.out.println("Atributos:\n\n");
+
+	}
+	
+	public List<Class<?>> obtemClassesFilhas(Class<?> entidade, String pacote) {
+		
+		List<Class<?>> classes = new ArrayList<Class<?>>();
+		BeanInfo info = null;
+		try {
+			info = Introspector.getBeanInfo(entidade);
+			System.out.println("\n\n\t******" + info.getBeanDescriptor());
+		} catch (IntrospectionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		PropertyDescriptor[] pds = info.getPropertyDescriptors();
+		
+		for (PropertyDescriptor propertyDescriptor : pds) {
+			
+			System.out.println("\nObtendo atributos da classe " + entidade.getSimpleName());
+			System.out.println("propertyDescriptor.getDisplayName -> " +  propertyDescriptor.getDisplayName());
+			System.out.println("propertyDescriptor.getName -> " +  propertyDescriptor.getName());
+			System.out.println("propertyDescriptor.getShortDescription -> " +  propertyDescriptor.getShortDescription());
+			System.out.println("propertyDescriptor.getClass -> " +  propertyDescriptor.getClass());
+			System.out.println("propertyDescriptor.getPropertyEditorClass -> " +  propertyDescriptor.getPropertyEditorClass());
+			System.out.println("propertyDescriptor.getPropertyType -> " +  propertyDescriptor.getPropertyType());
+			System.out.println("propertyDescriptor.getReadMethod -> " +  propertyDescriptor.getReadMethod());
+			System.out.println("propertyDescriptor.getWriteMethod -> " +  propertyDescriptor.getWriteMethod());
+			
+			String tipo = propertyDescriptor.getPropertyType().toString(); 
+			//if(tipo.contains("br.nom.penha.bruno")){
+			if(tipo.contains(pacote)){
+				classes.add(propertyDescriptor.getPropertyType());
+				List<Class<?>> classesFilhas = obtemClassesFilhas(propertyDescriptor.getPropertyType(),pacote);
+				classes.addAll(classesFilhas);
+			}
+			
+		}
+
+		return classes;
+		// System.out.println("Atributos:\n\n");
+
+	}
+
+	public PropertyDescriptor[] obtemAtributos(Class<?> entidade, String pacote) {
+		BeanInfo info = null;
+		try {
+			info = Introspector.getBeanInfo(entidade);
+			System.out.println("\n\n\t******" + info.getBeanDescriptor());
+		} catch (IntrospectionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		PropertyDescriptor[] pds = info.getPropertyDescriptors();
+		
+		for (PropertyDescriptor propertyDescriptor : pds) {
+			
+			System.out.println("\nObtendo atributos da classe " + entidade.getSimpleName());
+			System.out.println("propertyDescriptor.getDisplayName -> " +  propertyDescriptor.getDisplayName());
+			System.out.println("propertyDescriptor.getName -> " +  propertyDescriptor.getName());
+			System.out.println("propertyDescriptor.getShortDescription -> " +  propertyDescriptor.getShortDescription());
+			System.out.println("propertyDescriptor.getClass -> " +  propertyDescriptor.getClass());
+			System.out.println("propertyDescriptor.getPropertyEditorClass -> " +  propertyDescriptor.getPropertyEditorClass());
+			System.out.println("propertyDescriptor.getPropertyType -> " +  propertyDescriptor.getPropertyType());
+			System.out.println("propertyDescriptor.getReadMethod -> " +  propertyDescriptor.getReadMethod());
+			System.out.println("propertyDescriptor.getWriteMethod -> " +  propertyDescriptor.getWriteMethod());
+			
+			String tipo = propertyDescriptor.getPropertyType().toString(); 
+			//if(tipo.contains("br.nom.penha.bruno")){
+			if(tipo.contains(pacote)){
+				PropertyDescriptor[] pd = obtemAtributos(propertyDescriptor.getPropertyType(),pacote);
+			}
+			
+		}
+
+		return pds;
+		// System.out.println("Atributos:\n\n");
+
+	}
+
+	public String[] obtemNomesAtributos(Class<?> entidade) {
+		
+		String[] retorno = null;
 		BeanInfo info = null;
 		try {
 			info = Introspector.getBeanInfo(Client.class);
@@ -90,32 +249,22 @@ public class App {
 			e.printStackTrace();
 		}
 		PropertyDescriptor[] pds = info.getPropertyDescriptors();
+		
+		for (PropertyDescriptor propertyDescriptor : pds) {
+			
+		}
 
-		return pds;
-		// System.out.println("Atributos:\n\n");
+		return retorno;
 
 	}
 
-	public void criaTemplate() {
-
-		try {
-			PrintWriter writer = new PrintWriter("the-file-name.txt", "UTF-8");
-			writer.println("The first line");
-			writer.println("The second line");
-			writer.close();
-		} catch (IOException e) {
-			// do something
-		}
-
-		// Aqui deve ser incluido os atributos
-		List<String> lines = Arrays.asList("The first line", "The second line");
-		Path file = Paths.get("the-file-name.txt");
-		try {
-			Files.write(file, lines, Charset.forName("UTF-8"));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	/**
+	 * @param cm
+	 * @throws IOException
+	 */
+	private void geraArquivoExterno(JCodeModel cm) throws IOException {
+		File file = new File("./target/gerado");
+		file.mkdirs();
+		cm.build(file);
 	}
-
 }

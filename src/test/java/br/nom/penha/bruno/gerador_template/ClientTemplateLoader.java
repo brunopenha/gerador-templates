@@ -3,6 +3,7 @@ package br.nom.penha.bruno.gerador_template;
 import br.com.six2six.fixturefactory.Fixture;
 import br.com.six2six.fixturefactory.Rule;
 import br.com.six2six.fixturefactory.loader.TemplateLoader;
+import br.nom.penha.bruno.gerador_template.entidade.Address;
 import br.nom.penha.bruno.gerador_template.entidade.Client;
 
 public class ClientTemplateLoader implements TemplateLoader {

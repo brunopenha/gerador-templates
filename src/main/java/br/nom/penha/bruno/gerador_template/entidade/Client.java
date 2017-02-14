@@ -3,8 +3,6 @@ package br.nom.penha.bruno.gerador_template.entidade;
 import java.io.Serializable;
 import java.util.Calendar;
 
-import br.nom.penha.bruno.gerador_template.Address;
-
 public class Client implements Serializable {
 
 	private static final long serialVersionUID = 6875996936038420202L;
